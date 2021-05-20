@@ -42,6 +42,10 @@ public class CouponDetailDto {
         return this;
     }
 
+    public String getCode() {
+        return code;
+    }
+
     public CouponDetailDto build() {
         CouponDetailDto couponDetailDto = new CouponDetailDto();
         couponDetailDto.numberLine = this.numberLine;
