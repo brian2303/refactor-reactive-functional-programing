@@ -2,10 +2,6 @@ package com.example;
 
 
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -13,8 +9,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.BaseStream;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
@@ -23,70 +17,67 @@ import static java.util.Objects.requireNonNull;
 
 public class HelperKata {
     private static final String EMPTY_STRING = "";
-    private static String ANTERIOR_BONO = null;
+    private static String ANTERIOR_BONO = "";
     private static String characterSeparated = FileCSVEnum.CHARACTER_DEFAULT.getId();
     private static Set<String> codes = new HashSet<>();
     private static AtomicInteger counter = new AtomicInteger(0);
 
-
-
     public static Flux<CouponDetailDto> getListFromBase64File(final String fileBase64) {
-
         return createFluxFrom(fileBase64)
                 .map(HelperKata::toCouponDetail)
-                .map(HelperKata::toMapWithCouponDetailAndDto)
-                .map();
-
-
-//        return Flux.fromIterable(
-//                bufferedReader.lines().skip(1)
-//                        .map(line -> getTupleOfLine(line,line.split(characterSeparated), characterSeparated))
-//                        .map(tuple -> {
-//                            String dateValidated = null;
-//                            String errorMessage = null;
-//                            String bonoForObject = null;
-//                            String bonoEnviado;
-//
-//                            if (tuple.getT1().isBlank() || tuple.getT2().isBlank()) {
-//                                errorMessage = ExperienceErrorsEnum.FILE_ERROR_COLUMN_EMPTY.toString();
-//                            } else if (!codes.add(tuple.getT1())) {
-//                                errorMessage = ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString();
-//                            } else if (!validateDateRegex(tuple.getT2())) {
-//                                errorMessage = ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString();
-//                            } else if (validateDateIsMinor(tuple.getT2())) {
-//                                errorMessage = ExperienceErrorsEnum.FILE_DATE_IS_MINOR_OR_EQUALS.toString();
-//                            } else {
-//                                dateValidated = tuple.getT2();
-//                            }
-//
-//                            bonoEnviado = tuple.getT1();
-//                            if (ANTERIOR_BONO == null || ANTERIOR_BONO.equals("")) {
-//                                ANTERIOR_BONO = typeBono(bonoEnviado);
-//                                if (ANTERIOR_BONO == "") {
-//                                    bonoForObject = null;
-//                                } else {
-//                                    bonoForObject = bonoEnviado;
-//                                }
-//                            } else if (ANTERIOR_BONO.equals(typeBono(bonoEnviado))) {
-//                                bonoForObject = bonoEnviado;
-//                            } else if (!ANTERIOR_BONO.equals(typeBono(bonoEnviado))) {
-//                                bonoForObject = null;
-//                            }
-//
-//                            return CouponDetailDto.aCouponDetailDto()
-//                                    .withCode(bonoForObject)
-//                                    .withDueDate(dateValidated)
-//                                    .withNumberLine(counter.incrementAndGet())
-//                                    .withMessageError(errorMessage)
-//                                    .withTotalLinesFile(1)
-//                                    .build();
-//                        }).collect(Collectors.toList())
-//        );
-        return null;
+                .map(HelperKata::validateColumnBlank)
+                .map(HelperKata::validateCoupon)
+                .map(HelperKata::validateDate)
+                .map(HelperKata::validateDateIsMinor)
+                .map(HelperKata::dtoValidateCodeRepeated);
     }
 
-    private static Map<CouponDetail,CouponDetailDto> toMapWithCouponDetailAndDto(CouponDetail couponDetail) {
-        return Map.of(couponDetail,CouponDetailDto.aCouponDetailDto());
+    private static CouponDetailDto dtoValidateCodeRepeated(CouponDetailDto couponDetailDto){
+        return Optional.ofNullable(couponDetailDto.getCode())
+                .filter(code -> !codes.add(code))
+                .map(c -> couponDetailDto
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString())
+                        .build())
+                .orElseGet(couponDetailDto::build);
+    }
+
+    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
+        return Optional.ofNullable(couponDetailDto.getCode())
+                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
+                .map(c -> couponDetailDto.withCode(null))
+                .orElseGet(() -> couponDetailDto);
+    }
+
+    public static CouponDetailDto validateColumnBlank(CouponDetail couponDetail){
+        return Optional.of(couponDetail)
+                .filter(coupon -> coupon.getCode().isBlank() || coupon.getDueDate().isBlank())
+                .map(c -> CouponDetailDto
+                        .aCouponDetailDto()
+                        .withCode(null)
+                        .withTotalLinesFile(1)
+                        .withNumberLine(counter.incrementAndGet())
+                        .withDueDate(null)
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_COLUMN_EMPTY.toString()))
+                .orElseGet(() -> CouponDetailDto
+                        .aCouponDetailDto()
+                        .withCode(couponDetail.getCode())
+                        .withTotalLinesFile(1)
+                        .withNumberLine(counter.incrementAndGet())
+                        .withDueDate(couponDetail.getDueDate()));
+    }
+
+    private static CouponDetailDto validateDate(CouponDetailDto couponDetailDto){
+        return Optional.ofNullable(couponDetailDto.getDueDate())
+                .filter(date -> !validateDateRegex(date))
+                .map(c -> couponDetailDto.withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString()))
+                .orElseGet(() -> couponDetailDto);
+    }
+
+    private static CouponDetailDto validateDateIsMinor(CouponDetailDto couponDetailDto){
+        return Optional.ofNullable(couponDetailDto.getDueDate())
+                .filter(HelperKata::validateDateIsMinor)
+                .map(c -> couponDetailDto.withMessageError(ExperienceErrorsEnum.FILE_DATE_IS_MINOR_OR_EQUALS.toString()))
+                .orElseGet(() -> couponDetailDto);
     }
 
 
@@ -96,26 +87,6 @@ public class HelperKata {
                 .filter(HelperKata::hasAllColumns)
                 .map(columnsFields -> new CouponDetail(columnsFields.get(0),columnsFields.get(1)))
                 .orElseGet(() -> toCouponDetailWithColumnEmpty(line));
-    }
-
-    private static CouponDetail toCouponDetailWithColumnEmpty(String line){
-        var columns = List.of(line.split(characterSeparated));
-        return Optional.of(line)
-                .filter(HelperKata::hasCode)
-                .map(lineWithCode -> new CouponDetail(columns.get(0),EMPTY_STRING))
-                .orElseGet(() -> new CouponDetail(EMPTY_STRING,columns.get(0)));
-    }
-
-
-
-    private static Flux<String> createFluxFrom(String fileBase64) {
-        return Flux.using(
-                () -> new BufferedReader(new InputStreamReader(
-                        new ByteArrayInputStream(decodeBase64(fileBase64))
-                )).lines().skip(1),
-                Flux::fromStream,
-                Stream::close
-        );
     }
 
     public static String typeBono(String bonoIn) {
@@ -132,6 +103,26 @@ public class HelperKata {
         } else {
             return ValidateCouponEnum.ALPHANUMERIC.getTypeOfEnum();
         }
+    }
+
+
+    private static CouponDetail toCouponDetailWithColumnEmpty(String line){
+        var columns = List.of(line.split(characterSeparated));
+        return Optional.of(line)
+                .filter(HelperKata::hasCode)
+                .map(lineWithCode -> new CouponDetail(columns.get(0),EMPTY_STRING))
+                .orElseGet(() -> new CouponDetail(EMPTY_STRING,columns.get(0)));
+    }
+
+
+    private static Flux<String> createFluxFrom(String fileBase64) {
+        return Flux.using(
+                () -> new BufferedReader(new InputStreamReader(
+                        new ByteArrayInputStream(decodeBase64(fileBase64))
+                )).lines().skip(1),
+                Flux::fromStream,
+                Stream::close
+        );
     }
 
     public static boolean validateDateRegex(String dateForValidate) {

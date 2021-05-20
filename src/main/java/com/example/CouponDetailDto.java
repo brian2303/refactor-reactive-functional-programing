@@ -46,6 +46,10 @@ public class CouponDetailDto {
         return code;
     }
 
+    public String getDueDate() {
+        return dueDate;
+    }
+
     public CouponDetailDto build() {
         CouponDetailDto couponDetailDto = new CouponDetailDto();
         couponDetailDto.numberLine = this.numberLine;

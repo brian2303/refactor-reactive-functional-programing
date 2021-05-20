@@ -1,24 +1,4 @@
 
-I
-java:S1481 ",Remove this unused "counter" local variable.(êƒÄ¼8¼½¡—˜/
-P
-java:S1144‰"3Remove this unused private "getTupleOfLine" method.(ïäF8æı•—˜/
-[
-java:S1854""9Remove this useless assignment to local variable "codes".(øÌŸ¥şÿÿÿÿ8¼½¡—˜/
-L
-java:S1481""*Remove this unused "codes" local variable.(øÌŸ¥şÿÿÿÿ8¼½¡—˜/
-]	java:S1253"<This block of commented-out lines of code should be removed.(·Ãû×şÿÿÿÿ8æı•—˜/
-\
-java:S1118":Add a private constructor to hide the implicit public one.(–ìÓùÿÿÿÿ8¼Ã±—˜/
-S
-java:S1068"1Remove this unused "ANTERIOR_BONO" private field.(§ÆÂÌıÿÿÿÿ8æı•—˜/
-g
-java:S3358Œ"DExtract this nested ternary operation into an independent statement.(ªÔùœşÿÿÿÿ8·–î–˜/
-X
-java:S1854 ";Remove this useless assignment to local variable "counter".(êƒÄ¼8¼½¡—˜/
-b
-java:S3358"DExtract this nested ternary operation into an independent statement.(Ã¼”¡8·–î–˜/
-U
-java:S1128"8Remove this unused import 'java.util.stream.BaseStream'.(²İØã8œ÷œ•˜/
-z
-java:S3008"XRename this field "ANTERIOR_BONO" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(§ÆÂÌıÿÿÿÿ8·–î–˜/
+7
+java:S1220""Move this file to a named package.8äôÔÂ˜/
+]	java:S125"<This block of commented-out lines of code should be removed.(åèÅ›øÿÿÿÿ8äôÔÂ˜/
