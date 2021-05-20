@@ -42,6 +42,10 @@ public class CouponDetailDto {
         return this;
     }
 
+    public String getMessageError() {
+        return messageError;
+    }
+
     public String getCode() {
         return code;
     }

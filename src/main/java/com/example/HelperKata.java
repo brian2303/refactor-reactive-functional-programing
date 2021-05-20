@@ -27,9 +27,9 @@ public class HelperKata {
                 .map(HelperKata::toCouponDetail)
                 .map(HelperKata::validateColumnBlank)
 //                .map(HelperKata::validateCoupon)
+                .map(HelperKata::dtoValidateCodeRepeated)
                 .map(HelperKata::validateDate)
-                .map(HelperKata::validateDateIsMinor)
-                .map(HelperKata::dtoValidateCodeRepeated);
+                .map(HelperKata::validateDateIsMinor);
     }
 
     private static CouponDetail toCouponDetail(String line) {
@@ -55,17 +55,16 @@ public class HelperKata {
                         .withCode(couponDetail.getCode())
                         .withTotalLinesFile(1)
                         .withNumberLine(counter.incrementAndGet())
-                        .withDueDate(couponDetail.getDueDate()));
+                        .withDueDate(couponDetail.getDueDate())
+                        .withMessageError(""));
     }
 
     private static CouponDetailDto dtoValidateCodeRepeated(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getCode())
                 .filter(code -> !codes.add(code))
                 .map(c -> couponDetailDto
-                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString())
-                        .withDueDate(null)
-                        .build())
-                .orElseGet(couponDetailDto::build);
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString()))
+                .orElseGet(() -> couponDetailDto);
     }
 
 //    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
@@ -78,19 +77,22 @@ public class HelperKata {
     private static CouponDetailDto validateDate(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getDueDate())
                 .filter(date -> !validateDateRegex(date))
+                .map(date -> couponDetailDto.withDueDate(null))
+                .filter(coupon -> couponDetailDto.getMessageError().isBlank())
                 .map(c -> couponDetailDto
-                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString())
-                        .withDueDate(null))
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString()))
                 .orElseGet(() -> couponDetailDto);
     }
 
     private static CouponDetailDto validateDateIsMinor(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getDueDate())
                 .filter(HelperKata::validateDateIsMinor)
+                .map(date -> couponDetailDto.withDueDate(null))
+                .filter(coupon -> coupon.getMessageError().isBlank())
                 .map(c -> couponDetailDto
                         .withMessageError(ExperienceErrorsEnum.FILE_DATE_IS_MINOR_OR_EQUALS.toString())
-                        .withDueDate(null))
-                .orElseGet(() -> couponDetailDto);
+                        .build())
+                .orElseGet(couponDetailDto::build);
     }
 
 
