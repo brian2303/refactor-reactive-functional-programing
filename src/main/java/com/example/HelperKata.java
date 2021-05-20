@@ -26,26 +26,18 @@ public class HelperKata {
         return createFluxFrom(fileBase64)
                 .map(HelperKata::toCouponDetail)
                 .map(HelperKata::validateColumnBlank)
-                .map(HelperKata::validateCoupon)
+//                .map(HelperKata::validateCoupon)
                 .map(HelperKata::validateDate)
                 .map(HelperKata::validateDateIsMinor)
                 .map(HelperKata::dtoValidateCodeRepeated);
     }
 
-    private static CouponDetailDto dtoValidateCodeRepeated(CouponDetailDto couponDetailDto){
-        return Optional.ofNullable(couponDetailDto.getCode())
-                .filter(code -> !codes.add(code))
-                .map(c -> couponDetailDto
-                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString())
-                        .build())
-                .orElseGet(couponDetailDto::build);
-    }
-
-    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
-        return Optional.ofNullable(couponDetailDto.getCode())
-                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
-                .map(c -> couponDetailDto.withCode(null))
-                .orElseGet(() -> couponDetailDto);
+    private static CouponDetail toCouponDetail(String line) {
+        var columns = List.of(line.split(characterSeparated));
+        return Optional.of(columns)
+                .filter(HelperKata::hasAllColumns)
+                .map(columnsFields -> new CouponDetail(columnsFields.get(0),columnsFields.get(1)))
+                .orElseGet(() -> toCouponDetailWithColumnEmpty(line));
     }
 
     public static CouponDetailDto validateColumnBlank(CouponDetail couponDetail){
@@ -66,28 +58,41 @@ public class HelperKata {
                         .withDueDate(couponDetail.getDueDate()));
     }
 
+    private static CouponDetailDto dtoValidateCodeRepeated(CouponDetailDto couponDetailDto){
+        return Optional.ofNullable(couponDetailDto.getCode())
+                .filter(code -> !codes.add(code))
+                .map(c -> couponDetailDto
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString())
+                        .withDueDate(null)
+                        .build())
+                .orElseGet(couponDetailDto::build);
+    }
+
+//    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
+//        return Optional.ofNullable(couponDetailDto.getCode())
+//                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
+//                .map(c -> couponDetailDto.withCode(null))
+//                .orElseGet(() -> couponDetailDto);
+//    }
+
     private static CouponDetailDto validateDate(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getDueDate())
                 .filter(date -> !validateDateRegex(date))
-                .map(c -> couponDetailDto.withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString()))
+                .map(c -> couponDetailDto
+                        .withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString())
+                        .withDueDate(null))
                 .orElseGet(() -> couponDetailDto);
     }
 
     private static CouponDetailDto validateDateIsMinor(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getDueDate())
                 .filter(HelperKata::validateDateIsMinor)
-                .map(c -> couponDetailDto.withMessageError(ExperienceErrorsEnum.FILE_DATE_IS_MINOR_OR_EQUALS.toString()))
+                .map(c -> couponDetailDto
+                        .withMessageError(ExperienceErrorsEnum.FILE_DATE_IS_MINOR_OR_EQUALS.toString())
+                        .withDueDate(null))
                 .orElseGet(() -> couponDetailDto);
     }
 
-
-    private static CouponDetail toCouponDetail(String line) {
-        var columns = List.of(line.split(characterSeparated));
-        return Optional.of(columns)
-                .filter(HelperKata::hasAllColumns)
-                .map(columnsFields -> new CouponDetail(columnsFields.get(0),columnsFields.get(1)))
-                .orElseGet(() -> toCouponDetailWithColumnEmpty(line));
-    }
 
     public static String typeBono(String bonoIn) {
         if (bonoIn.chars().allMatch(Character::isDigit)
