@@ -29,8 +29,7 @@ public class HelperKata {
                 .map(HelperKata::validateColumnBlank)
                 .map(HelperKata::validateCoupon)
                 .map(HelperKata::dtoValidateCodeRepeated)
-                .map(HelperKata::validateDate)
-                .map(HelperKata::validateDateIsMinor);
+                .map(HelperKata::validateDate);
     }
 
     private static CouponDetail toCouponDetail(String line) {
@@ -83,7 +82,7 @@ public class HelperKata {
                 .filter(coupon -> couponDetailDto.getMessageError().isBlank())
                 .map(c -> couponDetailDto
                         .withMessageError(ExperienceErrorsEnum.FILE_ERROR_DATE_PARSE.toString()))
-                .orElseGet(() -> couponDetailDto);
+                .orElseGet(() -> validateDateIsMinor(couponDetailDto));
     }
 
     private static CouponDetailDto validateDateIsMinor(CouponDetailDto couponDetailDto){
