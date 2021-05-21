@@ -11,13 +11,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.requireNonNull;
 
 
 public class HelperKata {
     private static final String EMPTY_STRING = "";
-    private static String ANTERIOR_BONO = "";
+    private static String ANTERIOR_BONO = null;
     private static String characterSeparated = FileCSVEnum.CHARACTER_DEFAULT.getId();
     private static Set<String> codes = new HashSet<>();
     private static AtomicInteger counter = new AtomicInteger(0);
@@ -26,7 +24,7 @@ public class HelperKata {
         return createFluxFrom(fileBase64)
                 .map(HelperKata::toCouponDetail)
                 .map(HelperKata::validateColumnBlank)
-//                .map(HelperKata::validateCoupon)
+                .map(HelperKata::validateCoupon)
                 .map(HelperKata::dtoValidateCodeRepeated)
                 .map(HelperKata::validateDate)
                 .map(HelperKata::validateDateIsMinor);
@@ -67,12 +65,13 @@ public class HelperKata {
                 .orElseGet(() -> couponDetailDto);
     }
 
-//    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
-//        return Optional.ofNullable(couponDetailDto.getCode())
-//                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
-//                .map(c -> couponDetailDto.withCode(null))
-//                .orElseGet(() -> couponDetailDto);
-//    }
+    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
+        assignOnlyFirstCoupon(couponDetailDto.getCode());
+        return Optional.ofNullable(couponDetailDto.getCode())
+                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
+                .map(c -> couponDetailDto.withCode(null))
+                .orElseGet(() -> couponDetailDto);
+    }
 
     private static CouponDetailDto validateDate(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getDueDate())
@@ -163,5 +162,11 @@ public class HelperKata {
 
     private static boolean hasCode(String line) {
         return !line.startsWith(characterSeparated);
+    }
+
+    private static void assignOnlyFirstCoupon(String code){
+        if(ANTERIOR_BONO == null){
+            ANTERIOR_BONO = typeBono(code);
+        }
     }
 }
