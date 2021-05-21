@@ -15,10 +15,13 @@ import java.util.stream.Stream;
 
 public class HelperKata {
     private static final String EMPTY_STRING = "";
-    private static String ANTERIOR_BONO = null;
-    private static String characterSeparated = FileCSVEnum.CHARACTER_DEFAULT.getId();
-    private static Set<String> codes = new HashSet<>();
-    private static AtomicInteger counter = new AtomicInteger(0);
+    private static String firstCoupon;
+    private static final String CHARACTER_SEPARATED = FileCSVEnum.CHARACTER_DEFAULT.getId();
+    private static final Set<String> codes = new HashSet<>();
+    private static final AtomicInteger counter = new AtomicInteger(0);
+
+    private HelperKata() {
+    }
 
     public static Flux<CouponDetailDto> getListFromBase64File(final String fileBase64) {
         return createFluxFrom(fileBase64)
@@ -31,7 +34,7 @@ public class HelperKata {
     }
 
     private static CouponDetail toCouponDetail(String line) {
-        var columns = List.of(line.split(characterSeparated));
+        var columns = List.of(line.split(CHARACTER_SEPARATED));
         return Optional.of(columns)
                 .filter(HelperKata::hasAllColumns)
                 .map(columnsFields -> new CouponDetail(columnsFields.get(0),columnsFields.get(1)))
@@ -57,19 +60,19 @@ public class HelperKata {
                         .withMessageError(""));
     }
 
+    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
+        assignOnlyFirstCoupon(couponDetailDto.getCode());
+        return Optional.ofNullable(couponDetailDto.getCode())
+                .filter(code -> !firstCoupon.equals(typeBono(code)))
+                .map(c -> couponDetailDto.withCode(null))
+                .orElseGet(() -> couponDetailDto);
+    }
+
     private static CouponDetailDto dtoValidateCodeRepeated(CouponDetailDto couponDetailDto){
         return Optional.ofNullable(couponDetailDto.getCode())
                 .filter(code -> !codes.add(code))
                 .map(c -> couponDetailDto
                         .withMessageError(ExperienceErrorsEnum.FILE_ERROR_CODE_DUPLICATE.toString()))
-                .orElseGet(() -> couponDetailDto);
-    }
-
-    private static CouponDetailDto validateCoupon(CouponDetailDto couponDetailDto){
-        assignOnlyFirstCoupon(couponDetailDto.getCode());
-        return Optional.ofNullable(couponDetailDto.getCode())
-                .filter(code -> !ANTERIOR_BONO.equals(typeBono(code)))
-                .map(c -> couponDetailDto.withCode(null))
                 .orElseGet(() -> couponDetailDto);
     }
 
@@ -95,25 +98,19 @@ public class HelperKata {
     }
 
 
-    public static String typeBono(String bonoIn) {
-        if (bonoIn.chars().allMatch(Character::isDigit)
-                && bonoIn.length() >= 12
-                && bonoIn.length() <= 13) {
+    private static String typeBono(String bonoIn) {
+        if (isTypeEan13(bonoIn)) {
             return ValidateCouponEnum.EAN_13.getTypeOfEnum();
         }
-        if (bonoIn.startsWith("*")
-                && bonoIn.replace("*", "").length() >= 1
-                && bonoIn.replace("*", "").length() <= 43) {
+        if (isTypeEan39(bonoIn)) {
             return ValidateCouponEnum.EAN_39.getTypeOfEnum();
-
-        } else {
-            return ValidateCouponEnum.ALPHANUMERIC.getTypeOfEnum();
         }
+        return ValidateCouponEnum.ALPHANUMERIC.getTypeOfEnum();
     }
 
 
     private static CouponDetail toCouponDetailWithColumnEmpty(String line){
-        var columns = List.of(line.split(characterSeparated));
+        var columns = List.of(line.split(CHARACTER_SEPARATED));
         return Optional.of(line)
                 .filter(HelperKata::hasCode)
                 .map(lineWithCode -> new CouponDetail(columns.get(0),EMPTY_STRING))
@@ -131,7 +128,7 @@ public class HelperKata {
         );
     }
 
-    public static boolean validateDateRegex(String dateForValidate) {
+    private static boolean validateDateRegex(String dateForValidate) {
         String regex = FileCSVEnum.PATTERN_DATE_DEFAULT.getId();
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(dateForValidate);
@@ -142,7 +139,7 @@ public class HelperKata {
         return Base64.getDecoder().decode(fileBase64);
     }
 
-    public static boolean validateDateIsMinor(String dateForValidate) {
+    private static boolean validateDateIsMinor(String dateForValidate) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(FileCSVEnum.PATTERN_SIMPLE_DATE_FORMAT.getId());
             Date dateActual = sdf.parse(sdf.format(new Date()));
@@ -161,12 +158,22 @@ public class HelperKata {
     }
 
     private static boolean hasCode(String line) {
-        return !line.startsWith(characterSeparated);
+        return !line.startsWith(CHARACTER_SEPARATED);
     }
 
     private static void assignOnlyFirstCoupon(String code){
-        if(ANTERIOR_BONO == null){
-            ANTERIOR_BONO = typeBono(code);
+        if(firstCoupon == null){
+            firstCoupon = typeBono(code);
         }
+    }
+
+    private static boolean isTypeEan13(String bono){
+        return bono.chars().allMatch(Character::isDigit) && bono.length() >= 12 && bono.length() <= 13;
+    }
+
+    private static boolean isTypeEan39(String bono){
+        return bono.startsWith("*")
+                && bono.replace("*", "").length() >= 1
+                && bono.replace("*", "").length() <= 43;
     }
 }
